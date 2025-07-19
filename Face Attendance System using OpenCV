@@ -1,0 +1,107 @@
+import face_recognition
+import cv2
+import numpy as np
+import csv
+from datetime import datetime
+import os
+
+video_capture = cv2.VideoCapture(0)
+
+known_face_encodings = []
+known_face_names = []
+
+image_files = {
+    "Samarth": "photos/samarth.jpg",
+    "Sneha": "photos/Sneha.jpg",
+    "Prof.Jigyasa Mishra": "photos/jm.jpg",
+    "Saroj khare": "photos/sk.jpg",
+    "Dr.Dheeraj kumar dixit": "photos/dkd.jpg",
+}
+
+for name, file_path in image_files.items():
+    try:
+        image = face_recognition.load_image_file(file_path)
+     
+        face_locations = face_recognition.face_locations(image)
+        if len(face_locations) > 0:
+            encoding = face_recognition.face_encodings(image, face_locations)[0]
+            known_face_encodings.append(encoding)
+            known_face_names.append(name)
+            print(f"Successfully loaded: {name}")
+        else:
+            print(f"No face found in {file_path}")
+    except Exception as e:
+        print(f"Error loading {file_path}: {str(e)}")
+
+if len(known_face_encodings) == 0:
+    print("No face encodings were loaded. Please check your image files.")
+    exit()
+
+students = known_face_names.copy()
+
+now = datetime.now()
+current_date = now.strftime("%Y-%m-%d")
+output_path = f"attendance_{current_date}.csv"
+f = open(output_path, 'w+', newline='')
+lnwriter = csv.writer(f)
+lnwriter.writerow(["Name", "Time"])  
+
+process_this_frame = True
+
+while True:
+
+    ret, frame = video_capture.read()
+    if not ret:
+        print("Failed to grab frame from camera")
+        break
+
+    if process_this_frame:
+    
+        small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
+        rgb_small_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
+        
+        face_locations = face_recognition.face_locations(rgb_small_frame)
+       
+        face_names = []
+        if face_locations:
+            face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
+            
+            for face_encoding in face_encodings:
+                
+                matches = face_recognition.compare_faces(known_face_encodings, face_encoding)
+                name = "Unknown"
+                
+                if True in matches:
+                    face_distances = face_recognition.face_distance(known_face_encodings, face_encoding)
+                    best_match_index = np.argmin(face_distances)
+                    if matches[best_match_index]:
+                        name = known_face_names[best_match_index]
+                       
+                        if name in students:
+                            students.remove(name)
+                            current_time = datetime.now().strftime("%H:%M:%S")
+                            lnwriter.writerow([name, current_time])
+                            print(f"✅ Marked {name} at {current_time}")
+                
+                face_names.append(name)
+    
+    process_this_frame = not process_this_frame  
+    
+    for (top, right, bottom, left), name in zip(face_locations, face_names):
+        top *= 4
+        right *= 4
+        bottom *= 4
+        left *= 4
+       
+        cv2.rectangle(frame, (left, top), (right, bottom), (0, 255, 0), 2)
+        cv2.rectangle(frame, (left, bottom - 35), (right, bottom), (0, 255, 0), cv2.FILLED)
+        cv2.putText(frame, name, (left + 6, bottom - 6), cv2.FONT_HERSHEY_DUPLEX, 0.8, (255, 255, 255), 1)
+    
+    cv2.imshow('Attendance System', frame)
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+video_capture.release()
+cv2.destroyAllWindows()
+f.close()
+print(f"Attendance has been saved to {output_path}")
