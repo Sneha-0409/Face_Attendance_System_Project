@@ -15,3 +15,18 @@ The project flow includes:
 5. Writing recognized names and time to a CSV file in real-time
 
 This setup provided an efficient and fully automated system to track attendance without manual intervention.
+
+Tech Stack Used:
+1. Language: Python
+2. Libraries & Frameworks:
+   a. OpenCV – For real-time face detection using webcam
+   b. face_recognition – For encoding and recognizing faces
+   c. NumPy – For array and image processing operations
+   d. csv – For writing attendance data into Excel-compatible format
+   e. datetime – For capturing timestamps
+
+Tools:
+1. Webcam (for capturing live video input)
+2. VS Code (for development environment)
+3. Excel (for checking attendance logs)
+
